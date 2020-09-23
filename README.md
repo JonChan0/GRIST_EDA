@@ -25,7 +25,7 @@ API Documentation: https://europepmc.org/GristAPI
 - Grant Type
 - Grant Worth + Currency
 
-5) Once, Numpy array has been constructed as so, it will be converted to a tsv named with the particular 'search term' used. which can then be read into a tibble in R.
+5) Once, Numpy array has been constructed as so, it will be converted to a tsv named with the particular 'search term' used which can then be read into a tibble in R.
 
 6) Analysis of that particular 'search term' data can then be carried out to answer the following questions:
 - Who is the most well-funded for that 'search term' & when?
