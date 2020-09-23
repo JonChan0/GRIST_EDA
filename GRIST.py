@@ -13,6 +13,122 @@ import math
 import numpy as np
 import os
 
+def info_extractor(data_matrix,no_of_hits, page_number, input):
+
+
+    # In this case, input represents each Record i.e the list or dictionary of js_extract["RecordList"]["Record"]
+
+    if type(input) == dict:
+        length_range = range(1)
+    else:
+        length_range = range(len(input))
+
+    for i in length_range:
+
+        if type(input) == dict:
+            print("The last page has only one entry")
+            grantholder = input["Person"]
+            institution = input["Institution"]["Name"]
+            grant = input["Grant"]
+
+        else:
+            grantholder = input[i]["Person"]
+            try:
+                institution = input[i]["Institution"]["Name"]
+            except KeyError:
+                pass
+            grant = input[i]["Grant"]
+
+        try:
+            full_name = grantholder["Title"]  +' '+ grantholder["FamilyName"] + ' ' + grantholder["GivenName"]
+        except KeyError:
+            try:
+                partial_name = grantholder["FamilyName"]+ ' ' + grantholder["GivenName"]
+            except KeyError:
+                try:
+                    partial_name = grantholder["Title"] + ' ' + grantholder["FamilyName"]
+                except KeyError:
+                    pass
+            except:
+                pass
+        except:
+            pass
+
+        grant_title = grant["Title"]
+
+        try:
+            grant_abstract = grant["Abstract"]["$"]
+        except KeyError:
+            try:
+                grant_abstract = grant["Abstract"][0]["$"]
+            except KeyError:
+                pass
+        except:
+            pass
+
+
+        grant_source = grant["Funder"]["Name"]
+
+        try:
+            grant_amount = grant["Amount"]["$"] + grant["Amount"]["@Currency"]
+        except KeyError:
+            pass
+
+
+        try:
+            start_date = grant["StartDate"]
+            end_date = grant["EndDate"]
+            grant_type = grant["Type"]
+        except KeyError:
+            pass
+
+        data_matrix[(page_number-1)*25+i, 0] = str((page_number-1)*25 + i)
+
+        try:
+            data_matrix[(page_number-1)*25+i, 1] = full_name
+        except UnboundLocalError:
+            try:
+                data_matrix[(page_number-1)*25+i, 1] = partial_name
+            except UnboundLocalError:
+                pass
+        except:
+            pass
+
+        try:
+            data_matrix[(page_number-1)*25+i, 2] = institution
+        except UnboundLocalError:
+            pass
+
+        try:
+            data_matrix[(page_number-1)*25+i, 3] = start_date
+        except UnboundLocalError:
+            pass
+
+        try:
+            data_matrix[(page_number-1)*25+i, 4] = end_date
+        except UnboundLocalError:
+            pass
+
+        data_matrix[(page_number-1)*25+i, 5] = grant_title
+        data_matrix[(page_number-1)*25+i, 7] = grant_source
+
+        try:
+            data_matrix[(page_number-1)*25+i, 8] = grant_type
+        except UnboundLocalError:
+            pass
+
+        try:
+            data_matrix[(page_number-1)*25+i, 9] = grant_amount
+        except UnboundLocalError:
+            pass
+
+        try:
+            data_matrix[(page_number-1)*25+i, 6] = grant_abstract
+        except UnboundLocalError:
+            pass
+
+    return data_matrix
+
 def search_time():
     base_url = "http://www.ebi.ac.uk/europepmc/GristAPI/rest/get/query="
     result_addon_url = "&format=json&resultType=core"
@@ -68,9 +184,7 @@ def search_time():
 
 # Now we need to analyse each json file and strip out relevant details + store in Numpy array with dtype= strings
 # First initialise a empty Numpy array of row length = number of hits & column Length = 10
-
         data_matrix = np.empty((no_of_hits, 10), dtype=object)
-
         cursorObj.execute(''' SELECT*FROM jsons''')
         rows = cursorObj.fetchall()
 
@@ -82,76 +196,15 @@ def search_time():
                 print("error in extracting json file from SQLite3")
                 continue
 
-            page_number = row[0] # i.e page number = id number in SQLite database representing which json file
+            page_number = int(js_extract["Request"]["Page"]) # i.e page number = id number in SQLite database representing which json file
 
-            for i in range(len(js_extract["RecordList"]["Record"])):
+            data_matrix = info_extractor(data_matrix,no_of_hits, page_number, js_extract["RecordList"]["Record"])
 
-                grantholder = js_extract["RecordList"]["Record"][i]["Person"]
-
-                try:
-                    full_name = grantholder["Title"]  +' '+ grantholder["FamilyName"] + ' ' + grantholder["GivenName"]
-                except KeyError:
-                    pass
-
-
-                try:
-                    institution = js_extract["RecordList"]["Record"][i]["Institution"]["Name"]
-                except KeyError:
-                    pass
-
-
-                grant = js_extract["RecordList"]["Record"][i]["Grant"]
-
-                grant_title = grant["Title"]
-
-                try:
-                    grant_abstract = grant["Abstract"]["$"]
-                except KeyError:
-                    try:
-                        grant_abstract = grant["Abstract"][0]["$"]
-                    except KeyError:
-                        pass
-                except:
-                    pass
-
-
-                grant_source = grant["Funder"]["Name"]
-
-                try:
-                    grant_amount = grant["Amount"]["$"] + grant["Amount"]["@Currency"]
-                except KeyError:
-                    pass
-
-
-                try:
-                    start_date = grant["StartDate"]
-                    end_date = grant["EndDate"]
-                    grant_type = grant["Type"]
-                except KeyError:
-                    pass
-
-                data_matrix[(page_number-1)+i, 0] = str(page_number-1 + i)
-                data_matrix[(page_number-1)+i, 1] = full_name
-                data_matrix[(page_number-1)+i, 2] = institution
-                data_matrix[(page_number-1)+i, 3] = start_date
-                data_matrix[(page_number-1)+i, 4] = end_date
-                data_matrix[(page_number-1)+i, 5] = grant_title
-
-
-
-                data_matrix[(page_number-1)+i, 7] = grant_source
-                data_matrix[(page_number-1)+i, 8] = grant_type
-                data_matrix[(page_number-1)+i, 9] = grant_amount
-
-                try:
-                    data_matrix[(page_number-1)+i, 6] = grant_abstract
-                except:
-                    pass
 
         sql_connection.close()
-        #os.remove(search_term + ".sqlite")
+        os.remove(search_term + ".sqlite")
 
-        np.savetxt(search_term + ".tsv", data_matrix, fmt="%s", delimiter ="    ")
+        np.savetxt("output_tsv/" + search_term + ".tsv", data_matrix, fmt="%s", delimiter ="    ", encoding='utf-8')
         print("Numpy array for", search_term, "stored as .tsv")
 
         break
