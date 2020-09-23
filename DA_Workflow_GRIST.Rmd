@@ -47,8 +47,26 @@ library(tidyverse)
 
 Note that before you run the following code for data analysis, you should have run the GRIST.py script to output .tsv files of interest to the folder ./output_tsv
 
+The below code will import the .tsv files found within the ./output_tsv folder as individual tibbles.
 
-```{python}
+
+```{r import}
+filenames <- list.files("./output_tsv")
+
+file_trial <- read_tsv(str_c("./output_tsv/",filenames[2]), 
+                     col_names = c("ID","Name","Institution","Start Date","End Date","Title","Abstract", "Funder",                                         "Grant Type","Amount"), 
+                     col_types = "iccDDccccc",
+                     na="None")
+
+for (i in seq_along(filenames)){
+  file <- str_extract(filenames[i],".+\\.")
+  file1 <- read_tsv(str_c("./output_tsv/",filenames[i]), 
+                     col_names = c("ID","Name","Institution","Start Date","End Date","Title","Abstract", "Funder",                                         "Grant Type","Amount"), 
+                     col_types = "iccDDccccc",
+                     na="None")
+}
+
+
 
 ```
 

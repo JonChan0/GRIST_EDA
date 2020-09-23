@@ -12,6 +12,7 @@ import sqlite3
 import math
 import numpy as np
 import os
+import re
 
 def info_extractor(data_matrix,no_of_hits, page_number, input):
 
@@ -63,9 +64,13 @@ def info_extractor(data_matrix,no_of_hits, page_number, input):
 
         try:
             grant_abstract = grant["Abstract"]["$"]
+            if re.search(grant_abstract,"\r\n") == True:
+                grant_abstract = grant_abstract.replace("\r\n","")
         except KeyError:
             try:
                 grant_abstract = grant["Abstract"][0]["$"]
+                if re.search(grant_abstract,"\r\n") == True:
+                    grant_abstract = grant_abstract.replace("\r\n","")
             except KeyError:
                 pass
         except:
