@@ -48,6 +48,11 @@ def info_extractor(data_matrix,no_of_hits, page_number, input):
                 try:
                     partial_name = grantholder["Title"] + ' ' + grantholder["FamilyName"]
                 except KeyError:
+                    try:
+                        partial_name = grantholder["FamilyName"]
+                    except KeyError:
+                        pass
+                except:
                     pass
             except:
                 pass
