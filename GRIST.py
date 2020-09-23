@@ -209,7 +209,7 @@ def search_time():
         sql_connection.close()
         os.remove(search_term + ".sqlite")
 
-        np.savetxt("output_tsv/" + search_term + ".tsv", data_matrix, fmt="%s", delimiter ="    ", encoding='utf-8')
+        np.savetxt("output_tsv/" + search_term + ".tsv", data_matrix, fmt="%s", delimiter ="\t", encoding='utf-8')
         print("Numpy array for", search_term, "stored as .tsv")
 
         break
