@@ -15,16 +15,15 @@ API Documentation: https://europepmc.org/GristAPI
 2) Python3's urllib will interface withe GRIST API to spit out .json file for each 25 results from search term
 3) SQLite3 database will be used to cache each .json file for each page
 4) Once all .json files have been cached, Python3 will run through each .json file & strip out details from each grant entry and store them in a Numpy array with each row reflecting separate ID:
-  1) Full Name
-  2) Institution
-  3) Start Date
-  4) End Date
-  5) Grant Title
-  6) Grant Abstract
-  7) Grant Source
-  8) Grant Type
-  9) Grant Worth + Currency
-  
+- Full Name
+- Institution
+- Start Date
+- End Date
+- Grant Title
+- Grant Abstract
+- Grant Source
+- Grant Type
+- Grant Worth + Currency
 
 5) Once, Numpy array has been constructed as so, it will be converted to a tsv named with the particular 'search term' used. which can then be read into a tibble in R.
 
