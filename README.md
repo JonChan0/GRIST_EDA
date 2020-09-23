@@ -1,15 +1,15 @@
 # GRIST_EDA
 Backend implementation of Grants RESTful (GRIST) API from Europe PMC for data analysis of awarded grants in life sciences in UK/EU.
 
-# AIM:
+## Aim:
 This project aims to source data about awarded grants in the life sciences and to conduct analysis on this data.
 
-# DATA SOURCE:
+## Data Source:
 Grants RESTFul (GRIST) API from Europe PMC
 This provides coverage of funding from BBSRC UK; CRUK; NIHR; ERC; MRC UK; Wellcome Trust; WHO and more.
 API Documentation: https://europepmc.org/GristAPI
 
-# WORKFLOW:
+## Workflow
 
 1) Input search term of interest
 2) Python3's urllib will interface withe GRIST API to spit out .json file for each 25 results from search term
