@@ -5,7 +5,7 @@ Backend implementation of Grants RESTful (GRIST) API from Europe PMC for data an
 This project aims to source data about awarded grants in the life sciences and to conduct analysis on this data.
 
 ## Data Source:
-Grants RESTFul (GRIST) API from Europe PMC
+Grants RESTFul (GRIST) API from Europe PMC.
 This provides coverage of funding from BBSRC UK; CRUK; NIHR; ERC; MRC UK; Wellcome Trust; WHO and more.
 API Documentation: https://europepmc.org/GristAPI
 
@@ -14,18 +14,17 @@ API Documentation: https://europepmc.org/GristAPI
 1) Input search term of interest
 2) Python3's urllib will interface withe GRIST API to spit out .json file for each 25 results from search term
 3) SQLite3 database will be used to cache each .json file for each page
-4) Once all .json files have been cached, Python3 will run through each .json file & strip out details from each grant entry:
-  a) Full Name
-  b) Institution
-  c) Start Date
-  d) End Date
-  e) Grant Title
-  f) Grant Abstract
-  h) Grant Source
-  i) Grant Type
-  j) Grant Worth + Currency
+4) Once all .json files have been cached, Python3 will run through each .json file & strip out details from each grant entry and store them in a Numpy array with each row reflecting separate ID:
+  1) Full Name
+  2) Institution
+  3) Start Date
+  4) End Date
+  5) Grant Title
+  6) Grant Abstract
+  7) Grant Source
+  8) Grant Type
+  9) Grant Worth + Currency
   
-and store them in a Numpy array with each row reflecting separate ID i.e grant entry.
 
 5) Once, Numpy array has been constructed as so, it will be converted to a tsv named with the particular 'search term' used. which can then be read into a tibble in R.
 
