@@ -19,7 +19,7 @@ def info_extractor(data_matrix,no_of_hits, page_number, input):
 
     # In this case, input represents each Record i.e the list or dictionary of js_extract["RecordList"]["Record"]
 
-    if type(input) == dict:
+    if type(input) == dict: # This is the case for where there is only one entry in a page, whereby the type goes to a dictionary, instead of a list of dictionaries.
         length_range = range(1)
     else:
         length_range = range(len(input))
@@ -34,17 +34,18 @@ def info_extractor(data_matrix,no_of_hits, page_number, input):
 
         else:
             grantholder = input[i]["Person"]
-            try:
-                institution = input[i]["Institution"]["Name"]
-            except KeyError:
-                pass
             grant = input[i]["Grant"]
 
+            try: # The try & except clauses reflect the fact that some data is missing for some of the fields.
+                institution = input[i]["Institution"]["Name"]
+            except KeyError:
+                institution= None
+
         try:
-            full_name = grantholder["Title"]  +' '+ grantholder["FamilyName"] + ' ' + grantholder["GivenName"]
+            full_name = grantholder["Title"]  +' '+ grantholder["GivenName"] + ' ' + grantholder["FamilyName"]
         except KeyError:
             try:
-                partial_name = grantholder["FamilyName"]+ ' ' + grantholder["GivenName"]
+                partial_name = grantholder["GivenName"]+ ' ' + grantholder["FamilyName"]
             except KeyError:
                 try:
                     partial_name = grantholder["Title"] + ' ' + grantholder["FamilyName"]
@@ -52,45 +53,44 @@ def info_extractor(data_matrix,no_of_hits, page_number, input):
                     try:
                         partial_name = grantholder["FamilyName"]
                     except KeyError:
-                        pass
-                except:
-                    pass
-            except:
-                pass
-        except:
-            pass
+                        partial_name = None
 
         grant_title = grant["Title"]
+        grant_source = grant["Funder"]["Name"]
+
+        print((page_number-1)*25+i)
 
         try:
             grant_abstract = grant["Abstract"]["$"]
-            if re.search(grant_abstract,"\r\n") == True:
-                grant_abstract = grant_abstract.replace("\r\n","")
-        except KeyError:
+        except (KeyError, TypeError):
             try:
-                grant_abstract = grant["Abstract"][0]["$"]
-                if re.search(grant_abstract,"\r\n") == True:
-                    grant_abstract = grant_abstract.replace("\r\n","")
-            except KeyError:
-                pass
-        except:
-            pass
+                grant_abstract = grant["Abstract"][0]["$"] #This is for the cases where there are two abstracts, one scientific which we pull out, and one for laypeople.
+            except (KeyError):
+                grant_abstract=None
 
-
-        grant_source = grant["Funder"]["Name"]
+        if grant_abstract is not None and re.search("\\r\\n",grant_abstract) == True:
+            grant_abstract = grant_abstract.replace("\r\n","")
 
         try:
             grant_amount = grant["Amount"]["$"] + grant["Amount"]["@Currency"]
         except KeyError:
-            pass
+            grant_amount = None
 
 
         try:
             start_date = grant["StartDate"]
+        except KeyError:
+            start_date = None
+        try:
             end_date = grant["EndDate"]
+        except KeyError:
+            end_data = None
+        try:
             grant_type = grant["Type"]
         except KeyError:
-            pass
+            grant_type = None
+
+
 
         data_matrix[(page_number-1)*25+i, 0] = str((page_number-1)*25 + i)
 
@@ -100,42 +100,41 @@ def info_extractor(data_matrix,no_of_hits, page_number, input):
             try:
                 data_matrix[(page_number-1)*25+i, 1] = partial_name
             except UnboundLocalError:
-                pass
-        except:
-            pass
+                data_matrix[(page_number-1)*25+i, 1] = None
 
         try:
             data_matrix[(page_number-1)*25+i, 2] = institution
         except UnboundLocalError:
-            pass
+            data_matrix[(page_number-1)*25+i, 2] = None
 
         try:
             data_matrix[(page_number-1)*25+i, 3] = start_date
         except UnboundLocalError:
-            pass
+            data_matrix[(page_number-1)*25+i, 3] = None
 
         try:
             data_matrix[(page_number-1)*25+i, 4] = end_date
         except UnboundLocalError:
-            pass
+            data_matrix[(page_number-1)*25+i, 4] = None
 
         data_matrix[(page_number-1)*25+i, 5] = grant_title
+
+        try:
+            data_matrix[(page_number-1)*25+i, 6] = grant_abstract
+        except UnboundLocalError:
+            data_matrix[(page_number-1)*25+i, 6] = None
+
         data_matrix[(page_number-1)*25+i, 7] = grant_source
 
         try:
             data_matrix[(page_number-1)*25+i, 8] = grant_type
         except UnboundLocalError:
-            pass
+            data_matrix[(page_number-1)*25+i, 8] = None
 
         try:
             data_matrix[(page_number-1)*25+i, 9] = grant_amount
         except UnboundLocalError:
-            pass
-
-        try:
-            data_matrix[(page_number-1)*25+i, 6] = grant_abstract
-        except UnboundLocalError:
-            pass
+            data_matrix[(page_number-1)*25+i, 9] = None
 
     return data_matrix
 
@@ -208,11 +207,11 @@ def search_time():
 
             page_number = int(js_extract["Request"]["Page"]) # i.e page number = id number in SQLite database representing which json file
 
-            data_matrix = info_extractor(data_matrix,no_of_hits, page_number, js_extract["RecordList"]["Record"])
+            data_matrix = info_extractor(data_matrix,no_of_hits, page_number, js_extract["RecordList"]["Record"]) # Note that each time the request is run, the order of grants returned is changed and may be reflected in differences between .tsv and apparent .json.
 
 
         sql_connection.close()
-        os.remove(search_term + ".sqlite")
+        #os.remove(search_term + ".sqlite")
 
         np.savetxt("output_tsv/" + search_term + ".tsv", data_matrix, fmt="%s", delimiter ="\t", encoding='utf-8')
         print("Numpy array for", search_term, "stored as .tsv")
