@@ -58,15 +58,16 @@ def info_extractor(data_matrix,no_of_hits, page_number, input):
         grant_title = grant["Title"]
         grant_source = grant["Funder"]["Name"]
 
-        try:
-            institution_name = institution["Name"]
-        except KeyError:
-            institution_name = None
+        if institution is not None:
+            try:
+                institution_name = institution["Name"]
+            except KeyError:
+                institution_name = None
 
-        try:
-            institution_department = institution["Department"]
-        except KeyError:
-            institution_department = None
+            try:
+                institution_department = institution["Department"]
+            except KeyError:
+                institution_department = None
 
         # print((page_number-1)*25+i) # Uncomment if you need to track which record is causing an error
 
