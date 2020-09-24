@@ -79,8 +79,8 @@ def info_extractor(data_matrix,no_of_hits, page_number, input):
             except (KeyError):
                 grant_abstract=None
 
-        if grant_abstract is not None and re.search("\\r\\n",grant_abstract) == True:
-            grant_abstract = grant_abstract.replace("\r\n","")
+        if grant_abstract is not None and re.search("\r\n", grant_abstract) is not None:
+            grant_abstract = re.sub("\r\n"," ", grant_abstract)
 
         try:
             grant_amount = grant["Amount"]["$"] + " " + grant["Amount"]["@Currency"]
