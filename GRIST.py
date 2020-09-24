@@ -29,7 +29,7 @@ def info_extractor(data_matrix,no_of_hits, page_number, input):
         if type(input) == dict:
             print("The last page has only one entry")
             grantholder = input["Person"]
-            institution = input["Institution"]["Name"]
+            institution = input["Institution"]
             grant = input["Grant"]
 
         else:
@@ -37,7 +37,7 @@ def info_extractor(data_matrix,no_of_hits, page_number, input):
             grant = input[i]["Grant"]
 
             try: # The try & except clauses reflect the fact that some data is missing for some of the fields.
-                institution = input[i]["Institution"]["Name"]
+                institution = input[i]["Institution"]
             except KeyError:
                 institution= None
 
@@ -45,18 +45,28 @@ def info_extractor(data_matrix,no_of_hits, page_number, input):
             full_name = grantholder["Title"]  +' '+ grantholder["GivenName"] + ' ' + grantholder["FamilyName"]
         except KeyError:
             try:
-                partial_name = grantholder["GivenName"]+ ' ' + grantholder["FamilyName"]
+                full_name = grantholder["GivenName"]+ ' ' + grantholder["FamilyName"]
             except KeyError:
                 try:
-                    partial_name = grantholder["Title"] + ' ' + grantholder["FamilyName"]
+                    full_name = grantholder["Title"] + ' ' + grantholder["FamilyName"]
                 except KeyError:
                     try:
-                        partial_name = grantholder["FamilyName"]
+                        full_name = grantholder["FamilyName"]
                     except KeyError:
-                        partial_name = None
+                        full_name = None
 
         grant_title = grant["Title"]
         grant_source = grant["Funder"]["Name"]
+
+        try:
+            institution_name = institution["Name"]
+        except KeyError:
+            institution_name = None
+
+        try:
+            institution_department = institution["Department"]
+        except KeyError:
+            institution_department = None
 
         print((page_number-1)*25+i)
 
@@ -97,44 +107,46 @@ def info_extractor(data_matrix,no_of_hits, page_number, input):
         try:
             data_matrix[(page_number-1)*25+i, 1] = full_name
         except UnboundLocalError:
-            try:
-                data_matrix[(page_number-1)*25+i, 1] = partial_name
-            except UnboundLocalError:
-                data_matrix[(page_number-1)*25+i, 1] = None
+            data_matrix[(page_number-1)*25+i, 1] = None
 
         try:
-            data_matrix[(page_number-1)*25+i, 2] = institution
+            data_matrix[(page_number-1)*25+i, 2] = institution_name
         except UnboundLocalError:
             data_matrix[(page_number-1)*25+i, 2] = None
 
         try:
-            data_matrix[(page_number-1)*25+i, 3] = start_date
+            data_matrix[(page_number-1)*25+i, 3] = institution_department
         except UnboundLocalError:
             data_matrix[(page_number-1)*25+i, 3] = None
 
         try:
-            data_matrix[(page_number-1)*25+i, 4] = end_date
+            data_matrix[(page_number-1)*25+i, 4] = start_date
         except UnboundLocalError:
             data_matrix[(page_number-1)*25+i, 4] = None
 
-        data_matrix[(page_number-1)*25+i, 5] = grant_title
-
         try:
-            data_matrix[(page_number-1)*25+i, 6] = grant_abstract
+            data_matrix[(page_number-1)*25+i, 5] = end_date
         except UnboundLocalError:
-            data_matrix[(page_number-1)*25+i, 6] = None
+            data_matrix[(page_number-1)*25+i, 5] = None
 
-        data_matrix[(page_number-1)*25+i, 7] = grant_source
+        data_matrix[(page_number-1)*25+i, 6] = grant_title
 
         try:
-            data_matrix[(page_number-1)*25+i, 8] = grant_type
+            data_matrix[(page_number-1)*25+i, 7] = grant_abstract
         except UnboundLocalError:
-            data_matrix[(page_number-1)*25+i, 8] = None
+            data_matrix[(page_number-1)*25+i, 7] = None
+
+        data_matrix[(page_number-1)*25+i, 8] = grant_source
 
         try:
-            data_matrix[(page_number-1)*25+i, 9] = grant_amount
+            data_matrix[(page_number-1)*25+i, 9] = grant_type
         except UnboundLocalError:
             data_matrix[(page_number-1)*25+i, 9] = None
+
+        try:
+            data_matrix[(page_number-1)*25+i, 10] = grant_amount
+        except UnboundLocalError:
+            data_matrix[(page_number-1)*25+i, 10] = None
 
     return data_matrix
 
@@ -193,7 +205,7 @@ def search_time():
 
 # Now we need to analyse each json file and strip out relevant details + store in Numpy array with dtype= strings
 # First initialise a empty Numpy array of row length = number of hits & column Length = 10
-        data_matrix = np.empty((no_of_hits, 10), dtype=object)
+        data_matrix = np.empty((no_of_hits, 11), dtype=object)
         cursorObj.execute(''' SELECT*FROM jsons''')
         rows = cursorObj.fetchall()
 
