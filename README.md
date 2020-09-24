@@ -16,7 +16,8 @@ API Documentation: https://europepmc.org/GristAPI
 3) SQLite3 database will be used to cache each .json file for each page
 4) Once all .json files have been cached, Python3 will run through each .json file & strip out details from each grant entry and store them in a Numpy array with each row reflecting separate ID:
 - Full Name
-- Institution
+- Institution Name
+- Institution Department
 - Start Date
 - End Date
 - Grant Title
@@ -38,4 +39,4 @@ API Documentation: https://europepmc.org/GristAPI
 - How much total money is awarded over the years for different 'search terms'?
 - How many grants have been awarded over the years for different 'search terms'?
 
-8) Data will be outputted in the form of a flexdashboard::flex_dashboard
+8) Data will be outputted in the form of a flexdashboard::flex_dashboard or as part of frontend of Shiny web app.
