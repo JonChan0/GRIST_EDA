@@ -68,7 +68,7 @@ def info_extractor(data_matrix,no_of_hits, page_number, input):
         except KeyError:
             institution_department = None
 
-        print((page_number-1)*25+i)
+        # print((page_number-1)*25+i) # Uncomment if you need to track which record is causing an error
 
         try:
             grant_abstract = grant["Abstract"]["$"]
@@ -82,7 +82,7 @@ def info_extractor(data_matrix,no_of_hits, page_number, input):
             grant_abstract = grant_abstract.replace("\r\n","")
 
         try:
-            grant_amount = grant["Amount"]["$"] + grant["Amount"]["@Currency"]
+            grant_amount = grant["Amount"]["$"] + " " + grant["Amount"]["@Currency"]
         except KeyError:
             grant_amount = None
 
@@ -223,7 +223,7 @@ def search_time():
 
 
         sql_connection.close()
-        #os.remove(search_term + ".sqlite")
+        os.remove(search_term + ".sqlite")
 
         np.savetxt("output_tsv/" + search_term + ".tsv", data_matrix, fmt="%s", delimiter ="\t", encoding='utf-8')
         print("Numpy array for", search_term, "stored as .tsv")
