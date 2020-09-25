@@ -52,20 +52,25 @@ The below code will import the .tsv files found within the ./output_tsv folder a
 ```{r import}
 filenames <- list.files("./output_tsv")
 
-file_trial <- read_tsv(str_c("./output_tsv/",filenames[1]), 
+for (i in seq_along(filenames)){
+  file <- str_extract(filenames[i],".+\\.") %>%
+    str_extract(".+[^\\.]")
+  
+  tsv <- read_tsv(str_c("./output_tsv/",filenames[i]), 
                      col_names = c("ID","Name","Institution","Department", "Start Date","End Date","Title","Abstract", "Funder","Grant Type","Amount"), 
                      col_types = "icccDDccccc",
                      na="None",
                      quote="")
-
-for (i in seq_along(filenames)){
-  file <- str_extract(filenames[i],".+\\.")
-  file <- read_tsv(str_c("./output_tsv/",filenames[i]), 
-                     col_names = c("ID","Name","Institution","Department", "Start Date","End Date","Title","Abstract", "Funder","Grant Type","Amount"), 
-                     col_types = "icccDDccccc",
-                     na="None")
+  
+  intermediate <- file
+  assign(intermediate,tsv)
+  rm(tsv)
 }
+```
 
+The below code will tidy out some minor aspects of the imported tibbles.
+
+```{r tidy}
 
 
 ```
