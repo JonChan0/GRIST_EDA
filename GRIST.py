@@ -89,9 +89,14 @@ def info_extractor(data_matrix,no_of_hits, page_number, input):
             grant_abstract = re.sub("\\\\"," ", grant_abstract)
 
         try:
-            grant_amount = grant["Amount"]["$"] + " " + grant["Amount"]["@Currency"]
+            grant_amount = grant["Amount"]["$"]
         except KeyError:
             grant_amount = None
+
+        try:
+            grant_currency = grant["Amount"]["@Currency"]
+        except KeyError:
+            grant_currency = None
 
 
         try:
@@ -155,6 +160,11 @@ def info_extractor(data_matrix,no_of_hits, page_number, input):
         except UnboundLocalError:
             data_matrix[(page_number-1)*25+i, 10] = None
 
+        try:
+            data_matrix[(page_number-1)*25+i, 11] = grant_currency
+        except UnboundLocalError:
+            data_matrix[(page_number-1)*25+i, 11] = None
+
     return data_matrix
 
 def search_time():
@@ -212,7 +222,7 @@ def search_time():
 
 # Now we need to analyse each json file and strip out relevant details + store in Numpy array with dtype= strings
 # First initialise a empty Numpy array of row length = number of hits & column Length = 10
-        data_matrix = np.empty((no_of_hits, 11), dtype=object)
+        data_matrix = np.empty((no_of_hits, 12), dtype=object)
         cursorObj.execute(''' SELECT*FROM jsons''')
         rows = cursorObj.fetchall()
 
