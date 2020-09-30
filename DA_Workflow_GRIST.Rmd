@@ -66,7 +66,7 @@ for (i in seq_along(filenames)){
   
   intermediate <- file
   assign(intermediate,tsv)
-  rm(tsv,file,intermediate)
+  rm(tsv,file,intermediate) 
 }
 ```
 
@@ -90,12 +90,12 @@ currency_denoter <- function(amount_input,currency_input) { #Converts the curren
 
 currency_standardiser <- function(input_tb){
   standardised_rows <- input_tb %>%
-    filter(Currency != "GBP") %>%
+    filter(Currency != "GBP" && !is.na(Currency)) %>%
     mutate(Amount = map2_dbl(Amount,Currency,currency_denoter)) %>%
     mutate(Currency = "GBP")
   
   standardised_tb_V2 <- input_tb %>%
-    filter(Currency == "GBP") %>%
+    filter(Currency == "GBP" || is.na(Currency)) %>%
     full_join(standardised_rows) %>%
     arrange(ID)
 }
@@ -117,10 +117,66 @@ It will answer this question for each of the search terms, outputting for each s
 2. A line graph of total grant money active at any one time for each of x most well-funded PIs.
 
 
-```{r}
+```{r PI Analysis}
 
+top_x_PIs <- function(input_tb,x_to_keep=length(input_tb)){
+  top_PIs <- CRISPR %>%
+    group_by(Name) %>% 
+    mutate(Total_Amount = sum(Amount)) %>%
+    select(2,13) %>%
+    arrange(desc(Total_Amount)) %>%
+    distinct(Name, .keep_all= TRUE) %>%
+    ungroup()
+  
+  top_x <- slice_head(top_PIs, n=x_to_keep)
+  #biggest_moneymaker <- str(top_x[[1]][[1]])
+  #biggest_earnings <- str(top_x[[1]][[2]])
+  tb_name <- deparse(substitute(input_tb))
+  
+  print(ggplot(top_x,aes(Total_Amount, reorder(Name, Total_Amount)))+
+    geom_col() +
+    labs(x="Total GBP Awarded",y="Name of PI", 
+         title=str_c("Top",as.character(x_to_keep),"Well-Funded PIs for", tb_name, sep=" "), caption="Europe PMC GRIST API")
+  )
+  
+  return()
+}
 
+total_running_money_top_x_PIs <- function(input_tb, x_to_keep = length(input_tb)){
+  
+   top_x_PIs <- input_tb %>%
+    group_by(Name) %>%
+    mutate(Total_Amount = sum(Amount)) %>%
+    select(2,13) %>%
+    arrange(desc(Total_Amount)) %>%
+    distinct(Name, .keep_all= TRUE) %>%
+    ungroup()
+  
+  top_x <- slice_head(top_x_PIs, n=n_to_keep)
+  
+  
+  top_running_money_PIs <- input_tb %>%
+    group_by(Name) %>%
+    mutate(Total_Amount = sum(Amount)) %>%
+    select(2,5:6,11,13) %>%
+    arrange(desc(Total_Amount)) %>%
+    distinct() %>%
+    ungroup()
 
+  top_x_amount <- semi_join(top_running_money_PIs, top_x, by="Name")
+  
+  #Given that there will be multiple rows for each PI, I need to get the actual number of rows to slice
+  number_of_rows_for_top_x <- top_PIs %>%
+    mutate(Total_Amount_Rank = rank(desc(Total_Amount))) %>%
+    filter(Total_Amount_Rank <= x_to_keep)
+
+  
+  return(top_x_amount)
+  #top_x <- slice_head(top_PIs, n=number_of_rows_for_top_x)
+  
+}
+
+View(total_running_money_top_x_PIs(CRISPR,10))
 ```
 
 
