@@ -26,10 +26,11 @@ The ideal workflow will be like so:
 and store them in a Numpy array with each row reflecting separate ID i.e grant entry.
 
 5) Once, Numpy array has been constructed as so, it will be converted to a csv named with the particular 'search term' used. which can then be read into a tibble in R.
+
 6) Analysis of that particular 'search term' data can then be carried out to answer the following questions:
 - Who is the most well-funded for that 'search term' & when?
 - Which research institution is most well-funded for that 'search term' and when?
-- How much money has that 'search term' been funded in the past 2,5,10 years?
+- How much money has that 'search term' been funded over the past 2,5,10 years?
 
 
 7) Comparative analysis can also be conducted between tibbles for 'search terms'
@@ -42,6 +43,7 @@ and store them in a Numpy array with each row reflecting separate ID i.e grant e
 
 ```{r setup, include = FALSE}
 library(tidyverse)
+library(quantmod)
 ```
 
 Note that before you run the following code for data analysis, you should have run the GRIST.py script to output .tsv files of interest to the folder ./output_tsv
@@ -57,21 +59,68 @@ for (i in seq_along(filenames)){
     str_extract(".+[^\\.]")
   
   tsv <- read_tsv(str_c("./output_tsv/",filenames[i]), 
-                     col_names = c("ID","Name","Institution","Department", "Start Date","End Date","Title","Abstract", "Funder","Grant Type","Amount"), 
-                     col_types = "icccDDccccc",
+                     col_names = c("ID","Name","Institution","Department", "Start Date","End Date","Title","Abstract", "Funder","Grant Type","Amount", "Currency"), 
+                     col_types = "icccDDccccdc",
                      na="None",
                      quote="")
   
   intermediate <- file
   assign(intermediate,tsv)
-  rm(tsv)
+  rm(tsv,file,intermediate)
 }
 ```
 
-The below code will tidy out some minor aspects of the imported tibbles.
 
-```{r tidy}
+The below code will do some accessory work to compile all tibbles to iterate over all the tibbles & convert all currency values to GBP as per FX rates of `r Sys.time()`
+
+```{r acc}
+search_terms <- vector("character",length(filenames))
+for (i in seq_along(filenames)){
+  search_terms[i] <- str_extract(filenames[i],".+\\.") %>%
+    str_extract(".+[^\\.]")
+}
+
+currency_denoter <- function(amount_input,currency_input) { #Converts the currency for single row
+  getFX(str_c(currency_input,"/GBP"),Sys.Date()-1)
+  varname <- str_c(currency_input,"GBP")
+  rate <- eval(parse(text=varname))
+  gbp_out <- as.double(amount_input * rate[1,1])
+  return(gbp_out)
+}
+
+currency_standardiser <- function(input_tb){
+  standardised_rows <- input_tb %>%
+    filter(Currency != "GBP") %>%
+    mutate(Amount = map2_dbl(Amount,Currency,currency_denoter)) %>%
+    mutate(Currency = "GBP")
+  
+  standardised_tb_V2 <- input_tb %>%
+    filter(Currency == "GBP") %>%
+    full_join(standardised_rows) %>%
+    arrange(ID)
+}
+
+for (i in seq_along(search_terms)){ #This code is horribly inefficient but it works so...
+  relevant_tb <- eval(parse(text=str_c("`",search_terms[i],"`")))
+  standardised_tb <- currency_standardiser(relevant_tb)
+  assign(search_terms[i],standardised_tb)
+  rm(standardised_tb,relevant_tb)
+}
+```
+
+
+
+The below code will answer the question of **who are the x most well-funded PI ?** and **for the top x most well-funded PIs, what was the period of the grant & how much was each worth ?**.
+
+It will answer this question for each of the search terms, outputting for each search term
+1. A sorted bar chart of x PIs
+2. A line graph of total grant money active at any one time for each of x most well-funded PIs.
+
+
+```{r}
+
 
 
 ```
+
 
