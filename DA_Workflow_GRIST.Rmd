@@ -72,6 +72,7 @@ for (i in seq_along(filenames)){
 
 
 The below code will do some accessory work to compile all tibbles to iterate over all the tibbles & convert all currency values to GBP as per FX rates of `r Sys.time()`
+The tsv files also seem to have duplicate rows for some so this will have to be resolved.
 
 ```{r acc}
 search_terms <- vector("character",length(filenames))
@@ -90,11 +91,13 @@ currency_denoter <- function(amount_input,currency_input) { #Converts the curren
 
 currency_standardiser <- function(input_tb){
   standardised_rows <- input_tb %>%
+    distinct(Abstract, .keep_all=TRUE) %>% #This is to remove duplicate rows
     filter(Currency != "GBP" && !is.na(Currency)) %>%
     mutate(Amount = map2_dbl(Amount,Currency,currency_denoter)) %>%
     mutate(Currency = "GBP")
   
   standardised_tb_V2 <- input_tb %>%
+    distinct(Abstract, .keep_all=TRUE) %>% #This is to remove duplicate rows
     filter(Currency == "GBP" || is.na(Currency)) %>%
     full_join(standardised_rows) %>%
     arrange(ID)
