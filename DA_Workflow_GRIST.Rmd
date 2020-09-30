@@ -155,7 +155,7 @@ total_running_money_top_x_PIs <- function(input_tb, x_to_keep = length(input_tb)
     distinct(Name, .keep_all= TRUE) %>%
     ungroup()
   
-  top_x <- slice_head(top_x_PIs, n=n_to_keep)
+  top_x <- slice_head(top_x_PIs, n=x_to_keep)
   
   
   top_running_money_PIs <- input_tb %>%
@@ -167,12 +167,6 @@ total_running_money_top_x_PIs <- function(input_tb, x_to_keep = length(input_tb)
     ungroup()
 
   top_x_amount <- semi_join(top_running_money_PIs, top_x, by="Name")
-  
-  #Given that there will be multiple rows for each PI, I need to get the actual number of rows to slice
-  number_of_rows_for_top_x <- top_PIs %>%
-    mutate(Total_Amount_Rank = rank(desc(Total_Amount))) %>%
-    filter(Total_Amount_Rank <= x_to_keep)
-
   
   return(top_x_amount)
   #top_x <- slice_head(top_PIs, n=number_of_rows_for_top_x)
