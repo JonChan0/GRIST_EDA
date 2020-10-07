@@ -44,6 +44,7 @@ and store them in a Numpy array with each row reflecting separate ID i.e grant e
 ```{r setup, include = FALSE}
 library(tidyverse)
 library(quantmod)
+library(lubridate)
 ```
 
 Note that before you run the following code for data analysis, you should have run the GRIST.py script to output .tsv files of interest to the folder ./output_tsv
@@ -109,11 +110,15 @@ for (i in seq_along(search_terms)){ #This code is horribly inefficient but it wo
   assign(search_terms[i],standardised_tb)
   rm(standardised_tb,relevant_tb)
 }
+
+rm(filenames)
 ```
 
 
 
-The below code will answer the question of **who are the x most well-funded PI ?** and **for the top x most well-funded PIs, what was the period of the grant & how much was each worth ?**.
+The below code will answer the question of **who are the x most well-funded PI ?** (with arguments for top x as well as start date to filter) and **for the top x most well-funded PIs, what was the period of the grant & how much was each worth ?**.
+
+However, note that using end date to filter may remove entries which have missing end dates and end date cutoff must be inputted as a string.
 
 It will answer this question for each of the search terms, outputting for each search term
 1. A sorted bar chart of x PIs
@@ -122,8 +127,9 @@ It will answer this question for each of the search terms, outputting for each s
 
 ```{r PI Analysis}
 
-top_x_PIs <- function(input_tb,x_to_keep=length(input_tb)){
-  top_PIs <- CRISPR %>%
+top_x_PIs <- function(input_tb,x_to_keep=length(input_tb), end_date_cutoff = as.character(min(input_tb$`End Date`, na.rm=TRUE))){
+  top_PIs <- input_tb %>%
+    filter(`End Date` >= ymd(end_date_cutoff)) %>%
     group_by(Name) %>% 
     mutate(Total_Amount = sum(Amount)) %>%
     select(2,13) %>%
@@ -134,7 +140,7 @@ top_x_PIs <- function(input_tb,x_to_keep=length(input_tb)){
   top_x <- slice_head(top_PIs, n=x_to_keep)
   #biggest_moneymaker <- str(top_x[[1]][[1]])
   #biggest_earnings <- str(top_x[[1]][[2]])
-  tb_name <- deparse(substitute(input_tb))
+  tb_name <- deparse(substitute(input_tb)) # code to grab the name of the variable itself
   
   print(ggplot(top_x,aes(Total_Amount, reorder(Name, Total_Amount)))+
     geom_col() +
@@ -144,6 +150,26 @@ top_x_PIs <- function(input_tb,x_to_keep=length(input_tb)){
   
   return()
 }
+
+top_x_PIs(epigenetics,10,end_date_cutoff = "2016-01-01")
+
+total_running_money_calculator <- function(input_tb_rows){
+  total_at_any_time <- vector("numeric",nrow(input_tb_rows))
+  
+  for (i in seq(1,nrow(input_tb_rows))){
+    if (input_tb_rows[[2]][[i+1]] >= input_tb_rows[[3]][[i]]){ 
+      #i.e if the start date of row i+1 comes after the end date of row i
+      total_at_any_time[i] <- input_tb_rows[[4]][[i]]
+    }
+    
+    if (input_tb_rows[[2]][[i+1]] < input_tb_rows[[3]][[i]]){
+      #i.e if the start date of row i+ 1 comes before end date of row i.e overlapping grants
+      total_at_any_time[i] <- input_tb_rows[[4]][[i]] + input_tb_rows[[4]][[i+1]]
+    }
+  }
+}
+
+# Stuck on how to create total_running_money - perhaps you should just do a nested list-column for each PI where you have dates by month and you if.... you add amount to get the total active at any time and if not ... you just have the amount.
 
 total_running_money_top_x_PIs <- function(input_tb, x_to_keep = length(input_tb)){
   
@@ -166,14 +192,22 @@ total_running_money_top_x_PIs <- function(input_tb, x_to_keep = length(input_tb)
     distinct() %>%
     ungroup()
 
-  top_x_amount <- semi_join(top_running_money_PIs, top_x, by="Name")
+  top_x_amount <- semi_join(top_running_money_PIs, top_x, by="Name") %>%
+    mutate(Interval = `Start Date` %--% `End Date`)
+    group_by(Name)
+    
+    
   
-  return(top_x_amount)
-  #top_x <- slice_head(top_PIs, n=number_of_rows_for_top_x)
+  print(
+    ggplot(top_x_amount)+
+      geom_point(aes(`Start Date`,Amount,col=Name)) +
+      geom_point(aes(`End Date`, Amount, col=Name)) +
+      geom_step()
+  )
   
 }
 
-View(total_running_money_top_x_PIs(CRISPR,10))
+total_running_money_top_x_PIs(CRISPR,10)
 ```
 
 
