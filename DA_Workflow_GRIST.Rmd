@@ -29,6 +29,7 @@ and store them in a Numpy array with each row reflecting separate ID i.e grant e
 
 6) Analysis of that particular 'search term' data can then be carried out to answer the following questions:
 - Who is the most well-funded for that 'search term' & when?
+- Who has been awarded the most grants for that 'search term'?
 - Which research institution is most well-funded for that 'search term' and when?
 - How much money has that 'search term' been funded over the past 2,5,10 years?
 
@@ -107,7 +108,7 @@ currency_standardiser <- function(input_tb){
 for (i in seq_along(search_terms)){ #This code is horribly inefficient but it works so...
   relevant_tb <- eval(parse(text=str_c("`",search_terms[i],"`")))
   standardised_tb <- currency_standardiser(relevant_tb)
-  assign(search_terms[i],standardised_tb)
+  assign(search_terms[i],standardised_tb) # This assigns the new, standardised tibble to the same variable name as the                                             previous one.
   rm(standardised_tb,relevant_tb)
 }
 
@@ -116,7 +117,7 @@ rm(filenames)
 
 
 
-The below code will answer the question of **who are the x most well-funded PI ?** (with arguments for top x as well as start date to filter) and **for the top x most well-funded PIs, what was the period of the grant & how much was each worth ?**.
+The below code will answer the question of **who are the x most well-funded PI ?** (with arguments for top x as well as end date to filter) and **for the top x most well-funded PIs, what was the period of the grant & how much was each worth ?**.
 
 However, note that using end date to filter may remove entries which have missing end dates and end date cutoff must be inputted as a string.
 
@@ -127,7 +128,7 @@ It will answer this question for each of the search terms, outputting for each s
 
 ```{r PI Analysis}
 
-top_x_PIs <- function(input_tb,x_to_keep=length(input_tb), end_date_cutoff = as.character(min(input_tb$`End Date`, na.rm=TRUE))){
+top_x_PIs <- function(input_tb,x_to_keep=length(input_tb), end_date_cutoff = as.character(min(input_tb$`End Date`, na.rm=TRUE))){ # End date used as cutoff instead of start date because more results have NA as start date cf. end date.
   top_PIs <- input_tb %>%
     filter(`End Date` >= ymd(end_date_cutoff)) %>%
     group_by(Name) %>% 
@@ -152,6 +153,7 @@ top_x_PIs <- function(input_tb,x_to_keep=length(input_tb), end_date_cutoff = as.
 }
 
 top_x_PIs(epigenetics,10,end_date_cutoff = "2016-01-01")
+top_x_PIs(CRISPR,10,end_date_cutoff="2016-01-01")
 
 total_running_money_calculator <- function(input_tb_rows){
   total_at_any_time <- vector("numeric",nrow(input_tb_rows))
@@ -169,11 +171,12 @@ total_running_money_calculator <- function(input_tb_rows){
   }
 }
 
-# Stuck on how to create total_running_money - perhaps you should just do a nested list-column for each PI where you have dates by month and you if.... you add amount to get the total active at any time and if not ... you just have the amount.
 
-total_running_money_top_x_PIs <- function(input_tb, x_to_keep = length(input_tb)){
+total_running_money_top_x_PIs <- function(input_tb, x_to_keep = length(input_tb),
+                                          end_date_cutoff = as.character(min(input_tb$`End Date`, na.rm=TRUE))){
   
    top_x_PIs <- input_tb %>%
+    filter(`End Date` >= ymd(end_date_cutoff)) %>%
     group_by(Name) %>%
     mutate(Total_Amount = sum(Amount)) %>%
     select(2,13) %>%
@@ -185,6 +188,7 @@ total_running_money_top_x_PIs <- function(input_tb, x_to_keep = length(input_tb)
   
   
   top_running_money_PIs <- input_tb %>%
+    filter(`End Date` >= ymd(end_date_cutoff)) %>%
     group_by(Name) %>%
     mutate(Total_Amount = sum(Amount)) %>%
     select(2,5:6,11,13) %>%
@@ -193,17 +197,16 @@ total_running_money_top_x_PIs <- function(input_tb, x_to_keep = length(input_tb)
     ungroup()
 
   top_x_amount <- semi_join(top_running_money_PIs, top_x, by="Name") %>%
-    mutate(Interval = `Start Date` %--% `End Date`)
-    group_by(Name)
-    
-    
+    group_by(Name) %>%
+    pivot_longer(c(`Start Date`,`End Date`), names_to = "Dates", values_to = "Values")
   
   print(
-    ggplot(top_x_amount)+
-      geom_point(aes(`Start Date`,Amount,col=Name)) +
-      geom_point(aes(`End Date`, Amount, col=Name)) +
-      geom_step()
-  )
+  ggplot(top_x_amount)+
+    scale_x_date(name = "Date", date_breaks="1 year", date_labels="%Y")+
+    geom_point(aes(x=Values,y=Amount, col=Name))+
+    geom_step(aes(x=Values, y=Amount, col=Name))
+)
+
   
 }
 
