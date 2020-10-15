@@ -1,6 +1,8 @@
 ---
 title: "Data Analysis of Life Sciences Grants via GRIST API"
-output: html_notebook
+output: 
+  html_notebook:
+    code_folding: hide
 date: 2020-09-21
 ---
 This project aims to source data about awarded grants in the life sciences and to conduct analysis on this data.
@@ -9,10 +11,11 @@ Data Source: Grants RESTFul (GRIST) API from Europe PMC
 This provides coverage of funding from BBSRC UK; CRUK; NIHR; ERC; MRC UK; Wellcome Trust; WHO and more.
 
 The ideal workflow will be like so:
-1) Input search term
-2) Python3's urllib will utilise GRIST API to spit out .json file for each 25 results from search term
-3) SQLite3 database will be used to cache each .json file
-4) Once all .json files have been cached, Python3 will run through each .json file & strip out details from each grant entry:
+
+1. Input search term
+2. Python3's urllib will utilise GRIST API to spit out .json file for each 25 results from search term
+3. SQLite3 database will be used to cache each .json file
+4. Once all .json files have been cached, Python3 will run through each .json file & strip out details from each grant entry:
   a) Full Name
   b) Institution
   c) Start Date
@@ -25,21 +28,21 @@ The ideal workflow will be like so:
   
 and store them in a Numpy array with each row reflecting separate ID i.e grant entry.
 
-5) Once, Numpy array has been constructed as so, it will be converted to a csv named with the particular 'search term' used. which can then be read into a tibble in R.
+5. Once, Numpy array has been constructed as so, it will be converted to a csv named with the particular 'search term' used. which can then be read into a tibble in R.
 
-6) Analysis of that particular 'search term' data can then be carried out to answer the following questions:
+6. Analysis of that particular 'search term' data can then be carried out to answer the following questions:
 - Who is the most well-funded for that 'search term' & when?
 - Who has been awarded the most grants for that 'search term'?
 - Which research institution is most well-funded for that 'search term' and when?
 - How much money has that 'search term' been funded over the past 2,5,10 years?
 
 
-7) Comparative analysis can also be conducted between tibbles for 'search terms'
+7. Comparative analysis can also be conducted between tibbles for 'search terms'
 - How much money per grant is awarded between the different 'search terms'?
 - How much total money is awarded over the years for different 'search terms'?
 - How many grants have been awarded over the years for different 'search terms'?
 
-8) Data will be outputted in the form of a flexdashboard::flex_dashboard or Shiny web app.
+8. Data will be outputted in the form of a flexdashboard::flex_dashboard or Shiny web app.
 
 
 ```{r setup, include = FALSE}
@@ -50,8 +53,9 @@ library(lubridate)
 
 Note that before you run the following code for data analysis, you should have run the GRIST.py script to output .tsv files of interest to the folder ./output_tsv
 
-The below code will import the .tsv files found within the ./output_tsv folder as individual tibbles.
+You also, have to physically run all the code using 'Run' button first and then output via Knitr.
 
+The below code will import the .tsv files found within the ./output_tsv folder as individual tibbles.
 
 ```{r import}
 filenames <- list.files("./output_tsv")
@@ -73,10 +77,11 @@ for (i in seq_along(filenames)){
 ```
 
 
-The below code will do some accessory work to compile all tibbles to iterate over all the tibbles & convert all currency values to GBP as per FX rates of `r Sys.time()`
+The below code will do some accessory work to compile all tibbles to iterate over all the tibbles & convert all currency values to GBP as per FX rates of `r Sys.time()`.
+
 The tsv files also seem to have duplicate rows for some so this will have to be resolved.
 
-```{r acc}
+```{r acc, message=FALSE, warning=FALSE}
 search_terms <- vector("character",length(filenames))
 for (i in seq_along(filenames)){
   search_terms[i] <- str_extract(filenames[i],".+\\.") %>%
@@ -107,7 +112,8 @@ currency_standardiser <- function(input_tb){
 
 for (i in seq_along(search_terms)){ #This code is horribly inefficient but it works so...
   relevant_tb <- eval(parse(text=str_c("`",search_terms[i],"`")))
-  standardised_tb <- currency_standardiser(relevant_tb)
+  standardised_tb <- currency_standardiser(relevant_tb) %>%
+    mutate(Search_Term = search_terms[i]) #Adds an extra column denoting the particular search term
   assign(search_terms[i],standardised_tb) # This assigns the new, standardised tibble to the same variable name as the                                             previous one.
   rm(standardised_tb,relevant_tb)
 }
@@ -115,25 +121,24 @@ for (i in seq_along(search_terms)){ #This code is horribly inefficient but it wo
 rm(filenames)
 ```
 
-
-
 The below code will answer the question of **who are the x most well-funded PI ?** (with arguments for top x as well as end date to filter) and **for the top x most well-funded PIs, what was the period of the grant & how much was each worth ?**.
 
 However, note that using end date to filter may remove entries which have missing end dates and end date cutoff must be inputted as a string.
 
 It will answer this question for each of the search terms, outputting for each search term
+
 1. A sorted bar chart of x PIs
 2. A line graph of total grant money active at any one time for each of x most well-funded PIs.
 
 
-```{r PI Analysis}
+```{r PI_Analysis}
 
 top_x_PIs <- function(input_tb,x_to_keep=length(input_tb), end_date_cutoff = as.character(min(input_tb$`End Date`, na.rm=TRUE))){ # End date used as cutoff instead of start date because more results have NA as start date cf. end date.
   top_PIs <- input_tb %>%
     filter(`End Date` >= ymd(end_date_cutoff)) %>%
     group_by(Name) %>% 
     mutate(Total_Amount = sum(Amount)) %>%
-    select(2,13) %>%
+    select(2,Total_Amount,Search_Term) %>%
     arrange(desc(Total_Amount)) %>%
     distinct(Name, .keep_all= TRUE) %>%
     ungroup()
@@ -141,35 +146,17 @@ top_x_PIs <- function(input_tb,x_to_keep=length(input_tb), end_date_cutoff = as.
   top_x <- slice_head(top_PIs, n=x_to_keep)
   #biggest_moneymaker <- str(top_x[[1]][[1]])
   #biggest_earnings <- str(top_x[[1]][[2]])
-  tb_name <- deparse(substitute(input_tb)) # code to grab the name of the variable itself
+  #tb_name <- deparse(substitute(input_tb)) # code to grab the name of the variable itself
   
   print(ggplot(top_x,aes(Total_Amount, reorder(Name, Total_Amount)))+
     geom_col() +
     labs(x="Total GBP Awarded",y="Name of PI", 
-         title=str_c("Top",as.character(x_to_keep),"Well-Funded PIs for", tb_name, sep=" "), caption="Europe PMC GRIST API")
+         title=str_c("Top",as.character(x_to_keep),"Well-Funded PIs for", str_to_title(top_x$Search_Term[[1]]), sep=" "), caption="Europe PMC GRIST API")
   )
   
   return()
 }
 
-top_x_PIs(epigenetics,10,end_date_cutoff = "2016-01-01")
-top_x_PIs(CRISPR,10,end_date_cutoff="2016-01-01")
-
-total_running_money_calculator <- function(input_tb_rows){
-  total_at_any_time <- vector("numeric",nrow(input_tb_rows))
-  
-  for (i in seq(1,nrow(input_tb_rows))){
-    if (input_tb_rows[[2]][[i+1]] >= input_tb_rows[[3]][[i]]){ 
-      #i.e if the start date of row i+1 comes after the end date of row i
-      total_at_any_time[i] <- input_tb_rows[[4]][[i]]
-    }
-    
-    if (input_tb_rows[[2]][[i+1]] < input_tb_rows[[3]][[i]]){
-      #i.e if the start date of row i+ 1 comes before end date of row i.e overlapping grants
-      total_at_any_time[i] <- input_tb_rows[[4]][[i]] + input_tb_rows[[4]][[i+1]]
-    }
-  }
-}
 
 
 total_running_money_top_x_PIs <- function(input_tb, x_to_keep = length(input_tb),
@@ -179,7 +166,7 @@ total_running_money_top_x_PIs <- function(input_tb, x_to_keep = length(input_tb)
     filter(`End Date` >= ymd(end_date_cutoff)) %>%
     group_by(Name) %>%
     mutate(Total_Amount = sum(Amount)) %>%
-    select(2,13) %>%
+    select(2,Total_Amount,Search_Term) %>%
     arrange(desc(Total_Amount)) %>%
     distinct(Name, .keep_all= TRUE) %>%
     ungroup()
@@ -191,7 +178,7 @@ total_running_money_top_x_PIs <- function(input_tb, x_to_keep = length(input_tb)
     filter(`End Date` >= ymd(end_date_cutoff)) %>%
     group_by(Name) %>%
     mutate(Total_Amount = sum(Amount)) %>%
-    select(2,5:6,11,13) %>%
+    select(2,5:6,11,Total_Amount,Search_Term) %>%
     arrange(desc(Total_Amount)) %>%
     distinct() %>%
     ungroup()
@@ -200,17 +187,76 @@ total_running_money_top_x_PIs <- function(input_tb, x_to_keep = length(input_tb)
     group_by(Name) %>%
     pivot_longer(c(`Start Date`,`End Date`), names_to = "Dates", values_to = "Values")
   
+  
+  total_at_any_time <- vector("numeric",nrow(top_x_amount))
+  
+  for (i in seq(1,nrow(top_x_amount))){
+    
+    if(i == nrow(top_x_amount) || i == 1) {
+      total_at_any_time[[i]] <- top_x_amount$Amount[[i]]
+    }
+    
+    else{
+      
+      if(top_x_amount$Dates[[i]] == "Start Date" && top_x_amount$Dates[[i+1]] == "End Date" && top_x_amount$Dates[[i-1]] == "End Date"){
+        total_at_any_time[[i]] <- top_x_amount$Amount[[i]]
+      }
+      
+      if(top_x_amount$Dates[[i]] == "End Date" && top_x_amount$Dates[[i+1]] == "Start Date" && top_x_amount$Dates[[i-1]] == "Start Date"){
+        total_at_any_time[[i]] <- top_x_amount$Amount[[i]]
+      }
+      
+      # i.e the above two conditions are normal i.e start, end, start, end ... for the Dates column
+      
+      if(top_x_amount$Dates[[i]] == "Start Date" && top_x_amount$Dates[[i+1]] == "Start Date" && top_x_amount$Dates[[i-1]] != "Start Date") {
+        total_at_any_time[[i]] <- top_x_amount$Amount[[i]]
+        total_at_any_time[[i+1]] <- total_at_any_time[[i]] + top_x_amount$Amount[[i+1]]
+      }
+      
+      if(top_x_amount$Dates[[i]] == "Start Date" && top_x_amount$Dates[[i+1]] == "Start Date" && top_x_amount$Dates[[i-1]] == "Start Date") {
+        total_at_any_time[[i+1]] <- total_at_any_time[[i]] + top_x_amount$Amount[[i+1]]
+      }
+      
+      if(top_x_amount$Dates[[i]] == "Start Date" && top_x_amount$Dates[[i+1]] == "End Date" && top_x_amount$Dates[[i-1]] == "Start Date"){
+        total_at_any_time[[i+1]] <- total_at_any_time[[i]] - top_x_amount$Amount[[i+1]] # Junction/peak point for start
+      }
+      
+      if(top_x_amount$Dates[[i]] == "End Date" && top_x_amount$Dates[[i+1]] == "End Date" && top_x_amount$Dates[[i-1]] == "Start Date") {
+        total_at_any_time[[i+1]] <- total_at_any_time[[i]] - top_x_amount$Amount[[i+1]] #Junction/peak point for end
+      }
+      
+      if(top_x_amount$Dates[[i]] == "End Date" && top_x_amount$Dates[[i+1]] == "End Date" && top_x_amount$Dates[[i-1]] == "End Date") {
+        total_at_any_time[[i+1]] <- total_at_any_time[[i]] - top_x_amount$Amount[[i+1]] #Only applies for >= 3 grants active
+      }
+      
+      
+      
+    } # Note that the above statements write the value of the one in front.
+    
+  }
+  
+  top_x_amount <- cbind(top_x_amount, Rolling_Amount = total_at_any_time)
+  
   print(
-  ggplot(top_x_amount)+
-    scale_x_date(name = "Date", date_breaks="1 year", date_labels="%Y")+
-    geom_point(aes(x=Values,y=Amount, col=Name))+
-    geom_step(aes(x=Values, y=Amount, col=Name))
-)
-
+    ggplot(top_x_amount)+
+      scale_x_date(name = "Date", date_breaks="1 year", date_labels="%Y")+
+      geom_point(aes(x=Values,y=Rolling_Amount, col=Name))+
+      geom_step(aes(x=Values, y=Rolling_Amount, col=Name))+
+      labs(y="Total Running Amount of GBP Awarded",x="Year", 
+         title=str_c("Running Grant GBP for Top",as.character(x_to_keep),"Well-Funded PIs for", str_to_title(top_x_amount$Search_Term[[1]]), sep=" "), caption="Europe PMC GRIST API")
+  )
   
 }
 
-total_running_money_top_x_PIs(CRISPR,10)
+for (i in seq_along(search_terms)){
+  relevant_tb <- eval(parse(text=str_c("`",search_terms[i],"`")))
+  sorted_bar_chart <- top_x_PIs(relevant_tb,10) #default arguments = 10 PIs and for entire date range
+}
+
+for (i in seq_along(search_terms)){
+  relevant_tb <- eval(parse(text=str_c("`",search_terms[i],"`")))
+  sorted_bar_chart <- total_running_money_top_x_PIs(relevant_tb,10) #default arguments = 10 PIs and for entire date range
+}
 ```
 
 
