@@ -32,7 +32,6 @@ and store them in a Numpy array with each row reflecting separate ID i.e grant e
 
 6. Analysis of that particular 'search term' data can then be carried out to answer the following questions:
 - Who is the most well-funded for that 'search term' & when?
-- Who has been awarded the most grants for that 'search term'?
 - Which research institution is most well-funded for that 'search term' and when?
 - How much money has that 'search term' been funded over the past 2,5,10 years?
 
@@ -140,7 +139,7 @@ top_x_PIs <- function(input_tb,x_to_keep=length(input_tb), end_date_cutoff = as.
     mutate(Total_Amount = sum(Amount)) %>%
     select(2,Total_Amount,Search_Term) %>%
     arrange(desc(Total_Amount)) %>%
-    distinct(Name, .keep_all= TRUE) %>%
+    distinct(Name, .keep_all= TRUE) %>% # This is to remove duplicate entries for certain PIs
     ungroup()
   
   top_x <- slice_head(top_PIs, n=x_to_keep)
@@ -245,18 +244,103 @@ total_running_money_top_x_PIs <- function(input_tb, x_to_keep = length(input_tb)
       labs(y="Total Running Amount of GBP Awarded",x="Year", 
          title=str_c("Running Grant GBP for Top",as.character(x_to_keep),"Well-Funded PIs for", str_to_title(top_x_amount$Search_Term[[1]]), sep=" "), caption="Europe PMC GRIST API")
   )
-  
+  return()
 }
 
 for (i in seq_along(search_terms)){
   relevant_tb <- eval(parse(text=str_c("`",search_terms[i],"`")))
-  sorted_bar_chart <- top_x_PIs(relevant_tb,10) #default arguments = 10 PIs and for entire date range
+  sorted_bar_chart <- top_x_PIs(relevant_tb,10,"2010-01-01") #default arguments = 10 PIs and for entire date range
 }
 
 for (i in seq_along(search_terms)){
   relevant_tb <- eval(parse(text=str_c("`",search_terms[i],"`")))
-  sorted_bar_chart <- total_running_money_top_x_PIs(relevant_tb,10) #default arguments = 10 PIs and for entire date range
+  sorted_bar_chart <- total_running_money_top_x_PIs(relevant_tb,10,"2010-01-01") #default arguments = 10 PIs and for entire date range
 }
 ```
 
+The below code will answer the question of **who are the x most well-funded research institutions ** (with arguments for top x as well as end date to filter) and **for the top x most well-funded research institutions, what was the period of the grant & how much was each worth ?**.
+
+However, note that using end date to filter may remove entries which have missing end dates and end date cutoff must be inputted as a string.
+
+It will answer this question for each of the search terms, outputting for each search term
+
+1. A sorted bar chart of x research institutions.
+2. A line graph of total grant money active at any one time for each of x most well-funded research institutions.
+
+```{r RI_Analysis}
+
+top_x_RIs <- function(input_tb,x_to_keep=length(input_tb), end_date_cutoff = as.character(min(input_tb$`End Date`, na.rm=TRUE))){ # End date used as cutoff instead of start date because more results have NA as start date cf. end date.
+  top_x_RIs <- input_tb %>%
+    filter(`End Date` >= ymd(end_date_cutoff)) %>%
+    group_by(Institution) %>% 
+    mutate(Total_Amount = sum(Amount)) %>%
+    select(Institution,Total_Amount,Search_Term) %>%
+    arrange(desc(Total_Amount)) %>%
+    distinct(Institution, .keep_all= TRUE) %>%
+    ungroup()
+  
+  top_x <- slice_head(top_x_RIs, n=x_to_keep)
+  
+  print(ggplot(top_x,aes(Total_Amount, reorder(Institution, Total_Amount)))+
+    geom_col() +
+    labs(x="Total GBP Awarded",y="Name of Research Institution", 
+         title=str_c("Top",as.character(x_to_keep),"Well-Funded RIs for", str_to_title(top_x$Search_Term[[1]]), sep=" "), caption="Europe PMC GRIST API")
+  )
+  
+  return()
+}
+
+
+total_running_money_top_x_RIs <- function(input_tb, x_to_keep = length(input_tb),
+                                          end_date_cutoff = as.character(min(input_tb$`End Date`, na.rm=TRUE))){
+  
+   top_x_RIs <- input_tb %>%
+    filter(`End Date` >= ymd(end_date_cutoff)) %>%
+    group_by(Institution) %>% 
+    mutate(Total_Amount = sum(Amount)) %>%
+    select(Name,Institution,Total_Amount,Search_Term) %>%
+    arrange(desc(Total_Amount)) %>%
+    distinct(Institution, .keep_all= TRUE) %>%
+    ungroup()
+  
+  top_x <- slice_head(top_x_RIs, n=x_to_keep)
+  
+  
+  top_running_money_RIs <- input_tb %>%
+    filter(`End Date` >= ymd(end_date_cutoff)) %>%
+    group_by(Institution) %>%
+    mutate(Total_Amount = sum(Amount)) %>%
+    select(Name,Institution,5:6,11,Total_Amount,Search_Term) %>%
+    arrange(desc(Total_Amount)) %>%
+    distinct() %>%
+    ungroup()
+
+  top_x_amount <- semi_join(top_running_money_RIs, top_x, by="Institution") %>%
+    group_by(Institution) %>%
+    pivot_longer(c(`Start Date`,`End Date`), names_to = "Dates", values_to = "Values")
+
+  
+  print(
+    ggplot(top_x_amount)+
+      scale_x_date(name = "Date", date_breaks="1 year", date_labels="%Y")+
+      geom_point(aes(x=Values,y=Amount, col=Institution))+
+      geom_step(aes(x=Values, y=Amount, col=Institution, group=Name))+ #It will show each grant as a line from start to end.
+      labs(y="Grant Award Amount /GBP",x="Year", 
+         title=str_c("Grant Amounts for Top",as.character(x_to_keep),"Well-Funded RIs for", str_to_title(top_x_amount$Search_Term[[1]]), sep=" "), caption="Europe PMC GRIST API")
+     # ggrepel::geom_text_repel(aes(x=Values, y=Amount,label=Name),data=top_x_amount)
+  )
+  return()
+}
+
+for (i in seq_along(search_terms)){
+  relevant_tb <- eval(parse(text=str_c("`",search_terms[i],"`")))
+  sorted_bar_chart <- top_x_RIs(relevant_tb,10,"2010-01-01") #default arguments = 5 RIs and for entire date range
+}
+
+for (i in seq_along(search_terms)){
+  relevant_tb <- eval(parse(text=str_c("`",search_terms[i],"`")))
+  sorted_bar_chart <- total_running_money_top_x_RIs(relevant_tb,5,"2010-01-01") #default arguments = 5 RIs and for entire date range
+}
+
+```
 
