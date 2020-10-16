@@ -150,7 +150,7 @@ top_x_PIs <- function(input_tb,x_to_keep=length(input_tb), end_date_cutoff = as.
   print(ggplot(top_x,aes(Total_Amount, reorder(Name, Total_Amount)))+
     geom_col() +
     labs(x="Total GBP Awarded",y="Name of PI", 
-         title=str_c("Top",as.character(x_to_keep),"Well-Funded PIs for", str_to_title(top_x$Search_Term[[1]]), sep=" "), caption="Europe PMC GRIST API")
+         title=str_c("Top",as.character(x_to_keep),"Well-Funded PIs for", str_to_title(top_x$Search_Term[[1]]), sep=" "), caption="Europe PMC GRIST API", subtitle = str_c("n=",as.character(nrow(input_tb))))
   )
   
   return()
@@ -242,7 +242,7 @@ total_running_money_top_x_PIs <- function(input_tb, x_to_keep = length(input_tb)
       geom_point(aes(x=Values,y=Rolling_Amount, col=Name))+
       geom_step(aes(x=Values, y=Rolling_Amount, col=Name))+
       labs(y="Total Running Amount of GBP Awarded",x="Year", 
-         title=str_c("Running Grant GBP for Top",as.character(x_to_keep),"Well-Funded PIs for", str_to_title(top_x_amount$Search_Term[[1]]), sep=" "), caption="Europe PMC GRIST API")
+         title=str_c("Running Grant GBP for Top",as.character(x_to_keep),"Well-Funded PIs for", str_to_title(top_x_amount$Search_Term[[1]]), sep=" "), caption="Europe PMC GRIST API",subtitle = str_c("n=",as.character(nrow(input_tb))))
   )
   return()
 }
@@ -267,7 +267,7 @@ It will answer this question for each of the search terms, outputting for each s
 1. A sorted bar chart of x research institutions.
 2. A line graph of total grant money active at any one time for each of x most well-funded research institutions.
 
-```{r RI_Analysis}
+```{r RI_Analysis, out.width="100%"}
 
 top_x_RIs <- function(input_tb,x_to_keep=length(input_tb), end_date_cutoff = as.character(min(input_tb$`End Date`, na.rm=TRUE))){ # End date used as cutoff instead of start date because more results have NA as start date cf. end date.
   top_x_RIs <- input_tb %>%
@@ -284,8 +284,8 @@ top_x_RIs <- function(input_tb,x_to_keep=length(input_tb), end_date_cutoff = as.
   print(ggplot(top_x,aes(Total_Amount, reorder(Institution, Total_Amount)))+
     geom_col() +
     labs(x="Total GBP Awarded",y="Name of Research Institution", 
-         title=str_c("Top",as.character(x_to_keep),"Well-Funded RIs for", str_to_title(top_x$Search_Term[[1]]), sep=" "), caption="Europe PMC GRIST API")
-  )
+         title=str_c("Top",as.character(x_to_keep),"Well-Funded RIs for", str_to_title(top_x$Search_Term[[1]]), sep=" "), caption="Europe PMC GRIST API", subtitle = str_c("n=",as.character(nrow(input_tb)))))
+  
   
   return()
 }
@@ -326,7 +326,7 @@ total_running_money_top_x_RIs <- function(input_tb, x_to_keep = length(input_tb)
       geom_point(aes(x=Values,y=Amount, col=Institution))+
       geom_step(aes(x=Values, y=Amount, col=Institution, group=Name))+ #It will show each grant as a line from start to end.
       labs(y="Grant Award Amount /GBP",x="Year", 
-         title=str_c("Grant Amounts for Top",as.character(x_to_keep),"Well-Funded RIs for", str_to_title(top_x_amount$Search_Term[[1]]), sep=" "), caption="Europe PMC GRIST API")
+         title=str_c("Grant Amounts for Top",as.character(x_to_keep),"Well-Funded RIs for", str_to_title(top_x_amount$Search_Term[[1]]), sep=" "), caption="Europe PMC GRIST API", subtitle = str_c("n=",as.character(nrow(input_tb))))
      # ggrepel::geom_text_repel(aes(x=Values, y=Amount,label=Name),data=top_x_amount)
   )
   return()
@@ -343,4 +343,10 @@ for (i in seq_along(search_terms)){
 }
 
 ```
+
+The below code will answer the question of **how much total money has that 'search term' been funded over the past 2,5 and 10 years**.
+
+It will answer this question for each of the search terms, outputting for each search term
+
+1. A bar chart of total money funded with 3x groups: past 2 years, past 5 years and past 10 years.
 
