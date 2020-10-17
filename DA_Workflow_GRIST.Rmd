@@ -238,7 +238,7 @@ total_running_money_top_x_PIs <- function(input_tb, x_to_keep = length(input_tb)
   
   print(
     ggplot(top_x_amount)+
-      scale_x_date(name = "Date", date_breaks="1 year", date_labels="%Y")+
+      scale_x_date(name = "Date", date_breaks="2 year", date_labels="%Y")+
       geom_point(aes(x=Values,y=Rolling_Amount, col=Name))+
       geom_step(aes(x=Values, y=Rolling_Amount, col=Name))+
       labs(y="Total Running Amount of GBP Awarded",x="Year", 
@@ -249,12 +249,12 @@ total_running_money_top_x_PIs <- function(input_tb, x_to_keep = length(input_tb)
 
 for (i in seq_along(search_terms)){
   relevant_tb <- eval(parse(text=str_c("`",search_terms[i],"`")))
-  sorted_bar_chart <- top_x_PIs(relevant_tb,10,"2010-01-01") #default arguments = 10 PIs and for entire date range
+  sorted_bar_chart <- top_x_PIs(relevant_tb,20,"2010-01-01") #default arguments = 20 PIs and for finish date > 2010
 }
 
 for (i in seq_along(search_terms)){
   relevant_tb <- eval(parse(text=str_c("`",search_terms[i],"`")))
-  sorted_bar_chart <- total_running_money_top_x_PIs(relevant_tb,10,"2010-01-01") #default arguments = 10 PIs and for entire date range
+  sorted_bar_chart <- total_running_money_top_x_PIs(relevant_tb,20,"2010-01-01") #default arguments = 20 PIs and for finish date > 2010
 }
 ```
 
@@ -322,7 +322,7 @@ total_running_money_top_x_RIs <- function(input_tb, x_to_keep = length(input_tb)
   
   print(
     ggplot(top_x_amount)+
-      scale_x_date(name = "Date", date_breaks="1 year", date_labels="%Y")+
+      scale_x_date(name = "Date", date_breaks="2 year", date_labels="%Y")+
       geom_point(aes(x=Values,y=Amount, col=Institution))+
       geom_step(aes(x=Values, y=Amount, col=Institution, group=Name))+ #It will show each grant as a line from start to end.
       labs(y="Grant Award Amount /GBP",x="Year", 
