@@ -33,7 +33,7 @@ and store them in a Numpy array with each row reflecting separate ID i.e grant e
 6. Analysis of that particular 'search term' data can then be carried out to answer the following questions:
 - Who is the most well-funded for that 'search term' & when?
 - Which research institution is most well-funded for that 'search term' and when?
-- How much money has that 'search term' been funded over the past 2,5,10 years?
+- How much money has that 'search term' been funded over the past as a running total?
 
 
 7. Comparative analysis can also be conducted between tibbles for 'search terms'
@@ -46,6 +46,7 @@ and store them in a Numpy array with each row reflecting separate ID i.e grant e
 
 ```{r setup, include = FALSE}
 library(tidyverse)
+library(plotly)
 library(quantmod)
 library(lubridate)
 ```
@@ -142,16 +143,20 @@ top_x_PIs <- function(input_tb,x_to_keep=length(input_tb), end_date_cutoff = as.
     distinct(Name, .keep_all= TRUE) %>% # This is to remove duplicate entries for certain PIs
     ungroup()
   
-  top_x <- slice_head(top_PIs, n=x_to_keep)
+  top_x <- slice_head(top_PIs, n=x_to_keep) %>%
+    mutate(Ordered_Name = reorder(Name,Total_Amount))
   #biggest_moneymaker <- str(top_x[[1]][[1]])
   #biggest_earnings <- str(top_x[[1]][[2]])
   #tb_name <- deparse(substitute(input_tb)) # code to grab the name of the variable itself
   
-  print(ggplot(top_x,aes(Total_Amount, reorder(Name, Total_Amount)))+
+  
+  plot <- ggplot(top_x,aes(Total_Amount, Ordered_Name))+
     geom_col() +
     labs(x="Total GBP Awarded",y="Name of PI", 
          title=str_c("Top",as.character(x_to_keep),"Well-Funded PIs for", str_to_title(top_x$Search_Term[[1]]), sep=" "), caption="Europe PMC GRIST API", subtitle = str_c("n=",as.character(nrow(input_tb))))
-  )
+  
+  plot <- ggplotly(plot, tooltip=c("Total_Amount"))
+  print(plot)
   
   return()
 }
@@ -236,14 +241,16 @@ total_running_money_top_x_PIs <- function(input_tb, x_to_keep = length(input_tb)
   
   top_x_amount <- cbind(top_x_amount, Rolling_Amount = total_at_any_time)
   
-  print(
-    ggplot(top_x_amount)+
+  plot <- ggplot(top_x_amount)+
       scale_x_date(name = "Date", date_breaks="2 year", date_labels="%Y")+
       geom_point(aes(x=Values,y=Rolling_Amount, col=Name))+
       geom_step(aes(x=Values, y=Rolling_Amount, col=Name))+
       labs(y="Total Running Amount of GBP Awarded",x="Year", 
          title=str_c("Running Grant GBP for Top",as.character(x_to_keep),"Well-Funded PIs for", str_to_title(top_x_amount$Search_Term[[1]]), sep=" "), caption="Europe PMC GRIST API",subtitle = str_c("n=",as.character(nrow(input_tb))))
-  )
+    
+  plot <- ggplotly(plot)
+  print(plot)
+  
   return()
 }
 
@@ -281,10 +288,13 @@ top_x_RIs <- function(input_tb,x_to_keep=length(input_tb), end_date_cutoff = as.
   
   top_x <- slice_head(top_x_RIs, n=x_to_keep)
   
-  print(ggplot(top_x,aes(Total_Amount, reorder(Institution, Total_Amount)))+
+  plot <- ggplot(top_x,aes(Total_Amount, reorder(Institution, Total_Amount)))+
     geom_col() +
     labs(x="Total GBP Awarded",y="Name of Research Institution", 
-         title=str_c("Top",as.character(x_to_keep),"Well-Funded RIs for", str_to_title(top_x$Search_Term[[1]]), sep=" "), caption="Europe PMC GRIST API", subtitle = str_c("n=",as.character(nrow(input_tb)))))
+         title=str_c("Top",as.character(x_to_keep),"Well-Funded RIs for", str_to_title(top_x$Search_Term[[1]]), sep=" "), caption="Europe PMC GRIST API", subtitle = str_c("n=",as.character(nrow(input_tb))))
+  
+  plot <- ggplotly(plot,tooltip=c("Total_Amount"))
+  print(plot)
   
   
   return()
@@ -320,15 +330,18 @@ total_running_money_top_x_RIs <- function(input_tb, x_to_keep = length(input_tb)
     pivot_longer(c(`Start Date`,`End Date`), names_to = "Dates", values_to = "Values")
 
   
-  print(
-    ggplot(top_x_amount)+
+  plot <- ggplot(top_x_amount)+
       scale_x_date(name = "Date", date_breaks="2 year", date_labels="%Y")+
       geom_point(aes(x=Values,y=Amount, col=Institution))+
       geom_step(aes(x=Values, y=Amount, col=Institution, group=Name))+ #It will show each grant as a line from start to end.
       labs(y="Grant Award Amount /GBP",x="Year", 
          title=str_c("Grant Amounts for Top",as.character(x_to_keep),"Well-Funded RIs for", str_to_title(top_x_amount$Search_Term[[1]]), sep=" "), caption="Europe PMC GRIST API", subtitle = str_c("n=",as.character(nrow(input_tb))))
      # ggrepel::geom_text_repel(aes(x=Values, y=Amount,label=Name),data=top_x_amount)
-  )
+  
+  plot <- ggplotly(plot)
+  print(plot)
+    
+  
   return()
 }
 
@@ -344,9 +357,10 @@ for (i in seq_along(search_terms)){
 
 ```
 
-The below code will answer the question of **how much total money has that 'search term' been funded over the past 2,5 and 10 years**.
+The below code will answer the question of **how much total money has that 'search term' been funded over the past?**
 
 It will answer this question for each of the search terms, outputting for each search term
 
-1. A bar chart of total money funded with 3x groups: past 2 years, past 5 years and past 10 years.
+1. A line graph showing the cumulative sum of money over time
+2. A bar graph showing the total money granted in the past 2, 5, 10 years
 
