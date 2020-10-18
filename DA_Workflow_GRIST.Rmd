@@ -49,6 +49,8 @@ library(tidyverse)
 library(plotly)
 library(quantmod)
 library(lubridate)
+
+knitr::opts_chunk$set(fig.width = 12, fig.asp = 0.618, fig.align = "center") 
 ```
 
 Note that before you run the following code for data analysis, you should have run the GRIST.py script to output .tsv files of interest to the folder ./output_tsv
@@ -130,6 +132,11 @@ It will answer this question for each of the search terms, outputting for each s
 1. A sorted bar chart of x PIs
 2. A line graph of total grant money active at any one time for each of x most well-funded PIs.
 
+The plots are themselves interactive:
+- Hover over each point or bar to gain quantitative information
+- Use the toolbar functions to zoom in/out
+- Click on legend entries to remove certain data points from the graph.
+
 
 ```{r PI_Analysis}
 
@@ -155,7 +162,13 @@ top_x_PIs <- function(input_tb,x_to_keep=length(input_tb), end_date_cutoff = as.
     labs(x="Total GBP Awarded",y="Name of PI", 
          title=str_c("Top",as.character(x_to_keep),"Well-Funded PIs for", str_to_title(top_x$Search_Term[[1]]), sep=" "), caption="Europe PMC GRIST API", subtitle = str_c("n=",as.character(nrow(input_tb))))
   
-  plot <- ggplotly(plot, tooltip=c("Total_Amount"))
+  plot <- ggplotly(plot, tooltip=c("Total_Amount")) %>%
+    layout(title = list(text = paste0(str_c("Top",as.character(x_to_keep),"Well-Funded PIs for", str_to_title(top_x$Search_Term[[1]]), sep=" "),
+                                    '<br>',
+                                    '<sup>',
+                                    str_c("n=",as.character(nrow(input_tb))),
+                                    '</sup>')))
+  
   print(plot)
   
   return()
@@ -248,7 +261,12 @@ total_running_money_top_x_PIs <- function(input_tb, x_to_keep = length(input_tb)
       labs(y="Total Running Amount of GBP Awarded",x="Year", 
          title=str_c("Running Grant GBP for Top",as.character(x_to_keep),"Well-Funded PIs for", str_to_title(top_x_amount$Search_Term[[1]]), sep=" "), caption="Europe PMC GRIST API",subtitle = str_c("n=",as.character(nrow(input_tb))))
     
-  plot <- ggplotly(plot)
+  plot <- ggplotly(plot) %>%
+    layout(title = list(text = paste0(str_c("Running Grant GBP for Top",as.character(x_to_keep),"Well-Funded PIs for", str_to_title(top_x_amount$Search_Term[[1]]), sep=" "),
+                                    '<br>',
+                                    '<sup>',
+                                    str_c("n=",as.character(nrow(input_tb))),
+                                    '</sup>')))
   print(plot)
   
   return()
@@ -274,7 +292,7 @@ It will answer this question for each of the search terms, outputting for each s
 1. A sorted bar chart of x research institutions.
 2. A line graph of total grant money active at any one time for each of x most well-funded research institutions.
 
-```{r RI_Analysis, out.width="100%"}
+```{r RI_Analysis}
 
 top_x_RIs <- function(input_tb,x_to_keep=length(input_tb), end_date_cutoff = as.character(min(input_tb$`End Date`, na.rm=TRUE))){ # End date used as cutoff instead of start date because more results have NA as start date cf. end date.
   top_x_RIs <- input_tb %>%
