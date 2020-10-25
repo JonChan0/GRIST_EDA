@@ -34,6 +34,7 @@ and store them in a Numpy array with each row reflecting separate ID i.e grant e
 - Who is the most well-funded for that 'search term' & when?
 - Which research institution is most well-funded for that 'search term' and when?
 - How much money has that 'search term' been funded over the past as a running total?
+- Which funding body funds the most for that 'search term' and when?
 
 
 7. Comparative analysis can also be conducted between tibbles for 'search terms'
@@ -50,7 +51,7 @@ library(plotly)
 library(quantmod)
 library(lubridate)
 
-knitr::opts_chunk$set(fig.width = 12, fig.asp = 0.618, fig.align = "center") 
+#knitr::opts_chunk$set(fig.width = 12, fig.asp = 0.618, fig.align = "center") 
 ```
 
 Note that before you run the following code for data analysis, you should have run the GRIST.py script to output .tsv files of interest to the folder ./output_tsv
@@ -379,6 +380,41 @@ The below code will answer the question of **how much total money has that 'sear
 
 It will answer this question for each of the search terms, outputting for each search term
 
-1. A line graph showing the cumulative sum of money over time
-2. A bar graph showing the total money granted in the past 2, 5, 10 years
+
+1. A bar graph showing the total money granted in the past x, y, z years e.g 2, 5, 10.
+2. A line graph showing the cumulative sum of money over time
+
+```{r Money_Analysis}
+
+total_money_bar <- function(input_tb, integer_vector){ #where integer_vector represents vector of the x, y, z years
+  no_of_years <- length(integer_vector)
+  
+  time_arranged_money_tb <- input_tb %>% 
+    select(`End Date`, Amount, Search_Term) %>%
+    filter(!is.na(`End Date`)) %>% #N.B Time of grant will be taken as the end date because there are more missing values for the start date
+    arrange(`End Date`)
+    
+  filtered_tb_money <- vector("double",length(integer_vector))
+  
+  for (i in seq_along(integer_vector)){
+    past_x_years_tb <- time_arranged_money_tb %>%
+      filter(`End Date` >= Sys.Date() - integer_vector[i])
+    filtered_tb_money[i] <- sum(past_x_years_tb$Amount)
+  }
+  
+  data_for_plot_tb <- as_tibble(filtered_tb_money) %>%
+    cbind(Years = integer_vector, Search_Term = input_tb$Search_Term) %>%
+    rename(Amount = value)
+    
+  plot <- ggplot(data_for_plot_tb) +
+    geom_col(aes(x=Years, y=Amount)) +
+    labs(title= str_c("Total Amount Awarded to", str_to_title(data_for_plot_tb$Search_Term[[1]]), "over the past years", sep=" "), caption="Europe PMC GRIST API", subtitle = str_c("n=",as.character(nrow(input_tb))))
+  
+}
+
+total_money_bar(dCas9, c(2,5,10))
+
+```
+
+
 
