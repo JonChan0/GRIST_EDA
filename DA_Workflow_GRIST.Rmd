@@ -48,7 +48,8 @@ and store them in a Numpy array with each row reflecting separate ID i.e grant e
 ```{r setup, include = FALSE}
 library(tidyverse)
 library(plotly)
-library(quantmod)
+# library(quantmod) # Deprecated as per V0.2.7
+library(priceR)
 library(lubridate)
 
 #knitr::opts_chunk$set(fig.width = 12, fig.asp = 0.618, fig.align = "center") 
@@ -91,13 +92,19 @@ for (i in seq_along(filenames)){
     str_extract(".+[^\\.]")
 }
 
-currency_denoter <- function(amount_input,currency_input) { #Converts the currency for single row
-  getFX(str_c(currency_input,"/GBP"),Sys.Date()-1)
-  varname <- str_c(currency_input,"GBP")
-  rate <- eval(parse(text=varname))
-  gbp_out <- as.double(amount_input * rate[1,1])
-  return(gbp_out)
-}
+#currency_denoter <- function(amount_input,currency_input) { #Converts the currency for single row
+  #getFX(str_c(currency_input,"/GBP"),Sys.Date()-1)
+  #varname <- str_c(currency_input,"GBP")
+  #rate <- eval(parse(text=varname))
+  #gbp_out <- as.double(amount_input * rate[1,1])
+  #return(gbp_out)
+#}
+
+currency_denoter <- function(amount_input, currency_input){ #Converts the currency for single row
+  rates <- exchange_rate_latest(currency_input) %>%
+    filter(currency=='GBP')
+  gbp_out <- unlist(rates)[2]
+  }
 
 currency_standardiser <- function(input_tb){
   standardised_rows <- input_tb %>%
@@ -112,6 +119,7 @@ currency_standardiser <- function(input_tb){
     full_join(standardised_rows) %>%
     arrange(ID)
 }
+## This code could be easily improved by not rerunning currency_denoter every time. Instead, run at beginning to get tibble of all currency rates to GBP and then use values from that tibble.
 
 for (i in seq_along(search_terms)){ #This code is horribly inefficient but it works so...
   relevant_tb <- eval(parse(text=str_c("`",search_terms[i],"`")))
